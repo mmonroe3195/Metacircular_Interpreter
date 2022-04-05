@@ -100,11 +100,17 @@
 (popl-bind '/ / *TOPENV*)
 (popl-bind '= = *TOPENV*)
 (popl-bind 'cons cons *TOPENV*)
+(popl-bind 'car car *TOPENV*)
+(popl-bind 'cdr cdr *TOPENV*)
 
 ;; Yes, you can use scheme's if to implement this.
 ;; It's not cheating!
+
+;;fix! (if cond then else)
 (define (popl-eval-if expr env)
-        (if expr env))
+        (if (popl-eval (second expr) env)
+            (popl-eval (third expr) env)
+            (popl-eval (fourth expr) env)))
 ;; given a non-primitive function,
 ;; make a copy of the function's environment
 ;; and with that copy,
@@ -113,8 +119,12 @@
 ;; 2. evaluate each
 ;; element of the function's body.
 ;; 3. Return the last value.
+
 (define (popl-apply function arguments)
-   'not-implemented-yet)
+;fourth element of lambda is the environment
+;copy env
+'dolater
+ )
 
 ;; Evaluate all the elements of expr,
 ;; which is a list.
@@ -130,6 +140,8 @@
           (args (cdr all-evaluated)))
       (apply fun args)))
 
+;add syntax checking and errors
+;ex if we write (lambda) is bad or (lambda ())
 (define (popl-eval-lambda expr env)
    ;; expr is something like:  (lambda (a b c) form1 form2)
    ;; Error checking needs to be added to this function ensuring
