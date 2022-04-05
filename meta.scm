@@ -111,6 +111,34 @@
         (if (popl-eval (second expr) env)
             (popl-eval (third expr) env)
             (popl-eval (fourth expr) env)))
+
+(define (popl-eval-cond expr env)
+'add later
+)
+
+(define (popl-eval-set! expr env)
+'add later
+)
+
+(define (popl-eval-null? expr env)
+'add later
+)
+
+(define (popl-eval-let* expr env)
+'add later
+)
+
+(define (popl-eval-let expr env)
+'add later
+)
+
+(define (popl-eval-eq? expr env)
+'add later
+)
+
+(define (popl-eval-equal? expr env)
+'add later
+)
 ;; given a non-primitive function,
 ;; make a copy of the function's environment
 ;; and with that copy,
@@ -171,6 +199,20 @@
                 (popl-eval-lambda expr env))
                ((eq? (first expr) 'if)
                 (popl-eval-if expr env))
+               ((eq? (first expr) 'cond)
+                (popl-eval-cond expr env))
+               ((eq? (first expr) 'set!)
+                (popl-eval-set! expr env))
+               ((eq? (first expr) 'null?)
+                (popl-eval-null? expr env))
+               ((eq? (first expr) 'eq?)
+                (popl-eval-eq? expr env))
+               ((eq? (first expr) 'equal?)
+                (popl-eval-equal? expr env))
+               ((eq? (first expr) 'let)
+                (popl-eval-let expr env))
+               ((eq? (first expr) 'let*)
+                (popl-eval-let* expr env))
                (else (popl-eval-function-call expr env))))
         (else (popl-error "(internal) unknown object " expr " passed to evaluator"))))
 
