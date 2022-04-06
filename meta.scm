@@ -147,6 +147,7 @@
     )
 )
 
+
 (define (popl-eval-set! expr env)
 'add later
 )
@@ -223,7 +224,6 @@
                 (popl-eval-cond (cdr expr) env))
                ((eq? (first expr) 'set!)
                 (popl-eval-set! expr env))
-                (popl-eval-equal? expr env))
                ((eq? (first expr) 'let)
                 (popl-eval-let expr env))
                ((eq? (first expr) 'let*)
