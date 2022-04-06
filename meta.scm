@@ -102,25 +102,52 @@
 (popl-bind 'cons cons *TOPENV*)
 (popl-bind 'car car *TOPENV*)
 (popl-bind 'cdr cdr *TOPENV*)
+(popl-bind 'null? null? *TOPENV*)
+(popl-bind 'eq? eq? *TOPENV*)
+(popl-bind 'equal? equal? *TOPENV*)
+(popl-bind 'list list *TOPENV*)
+
 
 ;; Yes, you can use scheme's if to implement this.
 ;; It's not cheating!
 
-;;fix! (if cond then else)
+;(if cond then else)
+; (if cond
+;    a
+;    b)
 (define (popl-eval-if expr env)
         (if (popl-eval (second expr) env)
             (popl-eval (third expr) env)
             (popl-eval (fourth expr) env)))
 
+;expr is in the form
+;((cond1
+;       then1)
+
+;      (cond2
+;       then2)
+
+;      (cond3
+;       then3)
+
+;      (else
+;       action4))
 (define (popl-eval-cond expr env)
-'add later
+    (if (or (null? expr) (null? caar exp) (null? cdar expr))
+            (popl-error "Ill formed cond statment.")
+
+        (if (eq? (caar expr) 'else)
+            (popl-eval (cdar expr) env)
+
+            (if (popl-eval (caar expr) env)
+                (popl-eval (second (car expr)) env)
+                (popl-evaluate-cond (cdr expr) env)
+            )
+        )
+    )
 )
 
 (define (popl-eval-set! expr env)
-'add later
-)
-
-(define (popl-eval-null? expr env)
 'add later
 )
 
@@ -132,13 +159,6 @@
 'add later
 )
 
-(define (popl-eval-eq? expr env)
-'add later
-)
-
-(define (popl-eval-equal? expr env)
-'add later
-)
 ;; given a non-primitive function,
 ;; make a copy of the function's environment
 ;; and with that copy,
@@ -200,14 +220,9 @@
                ((eq? (first expr) 'if)
                 (popl-eval-if expr env))
                ((eq? (first expr) 'cond)
-                (popl-eval-cond expr env))
+                (popl-eval-cond (cdr expr) env))
                ((eq? (first expr) 'set!)
                 (popl-eval-set! expr env))
-               ((eq? (first expr) 'null?)
-                (popl-eval-null? expr env))
-               ((eq? (first expr) 'eq?)
-                (popl-eval-eq? expr env))
-               ((eq? (first expr) 'equal?)
                 (popl-eval-equal? expr env))
                ((eq? (first expr) 'let)
                 (popl-eval-let expr env))
