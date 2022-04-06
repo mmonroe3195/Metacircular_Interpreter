@@ -115,6 +115,8 @@
 ; (if cond
 ;    a
 ;    b)
+
+; do i need error checking?
 (define (popl-eval-if expr env)
         (if (popl-eval (second expr) env)
             (popl-eval (third expr) env)
