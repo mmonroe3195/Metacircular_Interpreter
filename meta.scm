@@ -142,7 +142,7 @@
 )
 
 (define (popl-eval-cond-helper expr env)
-    (if (not (pair? (car expr)))  (popl-error "Ill formed cond statment.")
+    (if (not (pair? (car expr))) (popl-error "Ill formed cond statment.")
         (if (not (null? expr))
             (cond ((popl-eval (caar expr) env) (popl-eval (cadar expr) env))
                   ((not (null? (cdr expr))) (popl-eval (popl-eval-cond-helper (cdr expr) env) env))
@@ -170,10 +170,20 @@
 'add later
 )
 
+;convert let* into nested lets
 (define (popl-eval-let* expr env)
 'add later
 )
 
+;(let ((x 2) (y 3))
+; (* x y))
+;can be converted into
+;
+; (define reverse-subtract
+ ;  (lambda (x y) (* x y)))
+ ;  (reverse-subtract 2 3)
+ 
+;convert let into lambda to solve
 (define (popl-eval-let expr env)
 'add later
 )
