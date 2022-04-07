@@ -123,7 +123,7 @@
             (popl-eval (fourth expr) env)))
 
 ;expr is in the form
-;((cond1
+;(cond (cond1
 ;       then1)
 
 ;      (cond2
@@ -134,20 +134,36 @@
 
 ;      (else
 ;       action4))
+
 (define (popl-eval-cond expr env)
-    (if (or (null? expr) (null? caar exp) (null? cdar expr))
-            (popl-error "Ill formed cond statment.")
+    (if (not (null? (cdr expr)))
+        (popl-eval-cond-helper (cdr expr) env)
+    )
+)
 
-        (if (eq? (caar expr) 'else)
-            (popl-eval (cdar expr) env)
-
-            (if (popl-eval (caar expr) env)
-                (popl-eval (second (car expr)) env)
-                (popl-evaluate-cond (cdr expr) env)
-            )
+(define (popl-eval-cond-helper expr env)
+    (if (not (pair? (car expr)))  (popl-error "Ill formed cond statment.")
+        (if (not (null? expr))
+            (cond ((popl-eval (caar expr) env) (popl-eval (cadar expr) env))
+                  ((not (null? (cdr expr))) (popl-eval (popl-eval-cond-helper (cdr expr) env) env))
+             )
         )
     )
 )
+;(define (popl-eval-cond expr env)
+;    (if (or (null? expr) (null? caar exp) (null? cdar expr))
+;            (popl-error "Ill formed cond statment.")
+;
+;        (if (eq? (caar expr) 'else)
+;            (popl-eval (cdar expr) env)
+;
+;            (if (popl-eval (caar expr) env)
+;                (popl-eval (second (car expr)) env)
+;                (popl-evaluate-cond (cdr expr) env)
+;            )
+;        )
+;    )
+;)
 
 
 (define (popl-eval-set! expr env)
@@ -223,7 +239,7 @@
                ((eq? (first expr) 'if)
                 (popl-eval-if expr env))
                ((eq? (first expr) 'cond)
-                (popl-eval-cond (cdr expr) env))
+                (popl-eval-cond expr env))
                ((eq? (first expr) 'set!)
                 (popl-eval-set! expr env))
                ((eq? (first expr) 'let)
