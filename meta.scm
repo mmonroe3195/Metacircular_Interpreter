@@ -200,9 +200,12 @@
 )
 ;convert let into lambda to solve
 ;(lambda (a b c) form1 form2)
+
+;currently does from ex. (let ((x 2) (y 3)) (* x y)) to
+;(lambda (x y) ((* x y)))
+
 (define (popl-eval-let expr env)
-    (popl-eval-lambda (append (cons 'lambda (list (get-cars (cadr expr)))) (list (cddr expr))) env)
-    (popl-eval-function-call)
+    (append (cons 'lambda (list (get-cars (cadr expr)))) (list (cddr expr)))
 )
 
 ;; given a non-primitive function,
