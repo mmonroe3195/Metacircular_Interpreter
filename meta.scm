@@ -182,10 +182,27 @@
 ; (define reverse-subtract
  ;  (lambda (x y) (* x y)))
  ;  (reverse-subtract 2 3)
- 
+
+;given a list, check if it is the form ((a b) (c d) ...)
+;returns a list in the form (a c ...)
+(define (get-cars lst)
+    (if (null? lst) ()
+        (if (not (null? (caar lst)))
+        (cons (caar lst) (get-cars (cdr lst)))))
+)
+
+;given a list, check if it is the form ((a b) (c d) ...)
+;returns a list in the form (b d ...)
+(define (get-cadars lst)
+    (if (null? lst) ()
+        (if (not (null? (cadar lst)))
+        (cons (cadar lst) (get-cadars (cdr lst)))))
+)
 ;convert let into lambda to solve
+;(lambda (a b c) form1 form2)
 (define (popl-eval-let expr env)
-'add later
+    (popl-eval-lambda (append (cons 'lambda (list (get-cars (cadr expr)))) (list (cddr expr))) env)
+    (popl-eval-function-call)
 )
 
 ;; given a non-primitive function,
