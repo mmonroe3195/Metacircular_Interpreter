@@ -99,6 +99,7 @@
 (popl-bind '* * *TOPENV*)
 (popl-bind '/ / *TOPENV*)
 (popl-bind '= = *TOPENV*)
+(popl-bind '* * *TOPENV*)
 (popl-bind 'cons cons *TOPENV*)
 (popl-bind 'car car *TOPENV*)
 (popl-bind 'cdr cdr *TOPENV*)
@@ -175,14 +176,6 @@
 'add later
 )
 
-;(let ((x 2) (y 3))
-; (* x y))
-;can be converted into
-;
-; (define reverse-subtract
- ;  (lambda (x y) (* x y)))
- ;  (reverse-subtract 2 3)
-
 ;given a list, check if it is the form ((a b) (c d) ...)
 ;returns a list in the form (a c ...)
 (define (get-cars lst)
@@ -198,16 +191,15 @@
         (if (not (null? (cadar lst)))
         (cons (cadar lst) (get-cadars (cdr lst)))))
 )
-;convert let into lambda to solve
-;(lambda (a b c) form1 form2)
 
-;currently does from ex. (let ((x 2) (y 3)) (* x y)) to
-;(lambda (x y) ((* x y)))
+;(let ((x 2) (x 3))
+;    (x * y))
 
+;convert to
+;((lambda (x y) (* x y)) 2 3)
 (define (popl-eval-let expr env)
-    (append (cons 'lambda (list (get-cars (cadr expr)))) (list (cddr expr)))
+    (popl-eval (append (list (append (cons 'lambda (list (get-cars (cadr expr)))) (cddr expr))) (get-cadars (cadr expr))) env)
 )
-
 ;; given a non-primitive function,
 ;; make a copy of the function's environment
 ;; and with that copy,
