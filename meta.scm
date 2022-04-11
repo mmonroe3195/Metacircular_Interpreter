@@ -209,10 +209,25 @@
 ;; element of the function's body.
 ;; 3. Return the last value.
 
-(define (popl-apply function arguments)
-;fourth element of lambda is the environment
-;copy env
-'dolater
+;check if apply is right
+(define (popl-apply function arguments env)
+    (popl-apply-helper (popl-copy-environment env) (cadr function) arguments)
+    (third function)
+ )
+
+ (define (popl-apply-helper env parameters arguments)
+    (if (or (null? parameters) (null? arguments))
+        (if (and (null? parameters) (null? arguments))
+            ()
+            (popl-error "Not the same number of arguments and parameters")
+        )
+
+        (popl-bind (car parameters) (car arguments) env)
+    )
+
+    (if (and (not (null? parameters)) (not (null? arguments)))
+        (popl-apply-helper env (cdr parameters) (cdr arguments))
+    )
  )
 
 ;; Evaluate all the elements of expr,
@@ -223,11 +238,21 @@
 ;; Else if the first element is a non-primitive function
 ;;   (begins with *LAMBDA*), then use popl-apply.
 ;; Otherwise use popl-error.
+
+;decide if procedure given is primative or not
 (define (popl-eval-function-call expr env)
-   (let* ((all-evaluated (map (lambda (e) (popl-eval e env)) expr))
-          (fun (car all-evaluated))
-          (args (cdr all-evaluated)))
-      (apply fun args)))
+    (if (procedure? (first expr))
+        (let* ((all-evaluated (map (lambda (e) (popl-eval e env)) expr))
+              (fun (car all-evaluated))
+              (args (cdr all-evaluated)))
+          (apply fun args))
+
+        (if (eq? (car (first expr)) 'lambda)
+            (popl-apply (first expr) (cdr expr) env)
+            (popl-error "The function call is in the wrong form")
+        )
+    )
+)
 
 ;add syntax checking and errors
 ;ex if we write (lambda) is bad or (lambda ())
