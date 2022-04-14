@@ -274,27 +274,20 @@
 ;; Else if the first element is a non-primitive function
 ;;   (begins with *LAMBDA*), then use popl-apply.
 ;; Otherwise use popl-error.
-
-;decide if procedure given is primative or not
-(define (popl-eval-function-call-old expr env)
-    (if (procedure? (first expr)) ; eq? '+ (first expr)
-        (popl-eval-primative expr env)
-        (if (eq? (car (first expr)) 'lambda)
-            (popl-apply (first expr) (cdr expr))
-            (popl-error "The function call is in the wrong form")
-        )
-    )
-)
-
 (define (popl-eval-function-call expr env)
    (let* ((all-evaluated (map (lambda (e) (popl-eval e env)) expr))
           (fun (car all-evaluated))
           (args (cdr all-evaluated)))
-      (cond ((and (list? fun) (eq? (car fun) *LAMBDA*))
+
+      (cond
+          ;if it is a non-primative expressions
+          ((and (list? fun) (eq? (car fun) *LAMBDA*))
             (popl-apply fun args))
-            ((procedure? (car all-evaluated))
+
+          ;if it is a primative expression
+          ((procedure? (car all-evaluated))
             (apply fun args))
-            (else (expr))
+          (else (popl-error "Ill formed statement!"))
       )
     )
 )
@@ -311,6 +304,11 @@
          (cddr expr)          ;; function body (list of expressions)
          env))                ;; the current environment
 
+(define (list-length lst)
+    (if (null? lst)
+        0
+        (+ 1 (list-length (cdr lst))))
+)
 ;; The name of the main evaluator is popl-eval-help
 ;; so that we can do enhanced tracing. See further comments below.
 (define (popl-eval-help expr env)
@@ -321,9 +319,11 @@
         ((symbol? expr) (popl-env-value expr env))
         ((pair? expr)
          (cond ((eq? (first expr) 'define)
-                (let ((sym (second expr))
-                      (val (popl-eval (third expr) env)))
-                  (popl-bind sym val env)))
+                (if (or (< (list-length expr) 3) (> (list-length expr) 3))
+                    (popl-error "Ill-formed special form: " expr)
+                    (let ((sym (second expr))
+                        (val (popl-eval (third expr) env)))
+                        (popl-bind sym val env))))
                ((eq? (first expr) 'quote)
                 (second expr))
                ((eq? (first expr) 'lambda)
@@ -371,9 +371,9 @@
   (let ((eval-level 0))   ;; keeps track of current recursion depth
     (lambda (expr env)
       (set! eval-level (+ eval-level 1))
-      (popl-debug-println eval-level "Evaluating: " expr)
+      ;(popl-debug-println eval-level "Evaluating: " expr)
       (let ((result (popl-eval-help expr env)))
-        (popl-debug-println eval-level "Returning: " result)
+        ;(popl-debug-println eval-level "Returning: " result)
         (set! eval-level (- eval-level 1))
         result))))
 
