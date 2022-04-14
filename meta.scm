@@ -153,7 +153,13 @@
 )
 
 (define (popl-eval-set! expr env)
-'add later
+    (if (not (popl-get-binding (cadr expr) env))
+        (popl-error "Unbound variable " (cadr expr))
+    )
+    (let ((var (popl-env-value (cadr expr) env)))
+         (popl-bind (cadr expr) (caddr expr) env)
+          var
+    )
 )
 
 ;helper function. Called recersively so nested lets can be made.
@@ -237,7 +243,8 @@
 (for-each (lambda (p a) (popl-bind p a env))
     (cadr function)
     arguments)
-    ;(popl-eval (third function) env)
+    ;(popl-eval (third function) env) ;uncomment when this is working for primitives
+    ;function
  )
 
 ;; Evaluate all the elements of expr,
@@ -252,17 +259,20 @@
 ;decide if procedure given is primative or not
 (define (popl-eval-function-call expr env)
     (if (procedure? (first expr))
-        (let* ((all-evaluated (map (lambda (e) (popl-eval e env)) expr))
-              (fun (car all-evaluated))
-              (args (cdr all-evaluated)))
-          (apply fun args))
-
+        (popl-eval-primative expr env)
         (if (eq? (car (first expr)) 'lambda)
             (popl-apply (first expr) (cdr expr) env)
             (popl-error "The function call is in the wrong form")
         )
     )
 )
+
+(define (popl-eval-primative expr env)
+   (let* ((all-evaluated (map (lambda (e) (popl-eval e env)) expr))
+          (fun (car all-evaluated))
+          (args (cdr all-evaluated)))
+      (apply fun args))
+      )
 
 ;add syntax checking and errors
 ;ex if we write (lambda) is bad or (lambda ())
