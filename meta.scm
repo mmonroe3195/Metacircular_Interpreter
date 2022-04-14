@@ -151,29 +151,23 @@
         )
     )
 )
-;(define (popl-eval-cond expr env)
-;    (if (or (null? expr) (null? caar exp) (null? cdar expr))
-;            (popl-error "Ill formed cond statment.")
-;
-;        (if (eq? (caar expr) 'else)
-;            (popl-eval (cdar expr) env)
-;
-;            (if (popl-eval (caar expr) env)
-;                (popl-eval (second (car expr)) env)
-;                (popl-evaluate-cond (cdr expr) env)
-;            )
-;        )
-;    )
-;)
-
 
 (define (popl-eval-set! expr env)
 'add later
 )
 
-;convert let* into nested lets
+;helper function. Called recersively so nested lets can be made.
+(define (let-helper bindlst body)
+    (if (null? bindlst)
+        body
+        (append (cons 'let (list (list (car bindlst))))
+            (list (let-helper (cdr bindlst) body)))
+        )
+)
+
+;converts let* into nested lets
 (define (popl-eval-let* expr env)
-'add later
+    (popl-eval (let-helper (cadr expr) (caddr expr)) env)
 )
 
 ;given a list, check if it is the form ((a b) (c d) ...)
@@ -192,14 +186,43 @@
         (cons (cadar lst) (get-cadars (cdr lst)))))
 )
 
+(define (cars-are-lists expr)
+    (if (null? expr)
+        #t
+        (if (list? (car expr))
+            (cars-are-lists (cdr expr))
+            #f
+        )
+    )
+)
+
 ;(let ((x 2) (x 3))
 ;    (x * y))
 
 ;convert to
 ;((lambda (x y) (* x y)) 2 3)
 (define (popl-eval-let expr env)
-    (popl-eval (append (list (append (cons 'lambda (list (get-cars (cadr expr)))) (cddr expr))) (get-cadars (cadr expr))) env)
+    (if (or (null? (cdr expr)) (null? (cddr expr)) (not (cars-are-lists (cadr expr))))
+        (popl-error "Ill formed syntax")
+        (popl-eval (append (list (append (cons 'lambda (list (get-cars (cadr expr)))) (cddr expr))) (get-cadars (cadr expr))) env)
+    )
 )
+
+(define (popl-apply-helper env parameters arguments)
+   (if (or (null? parameters) (null? arguments))
+       (if (and (null? parameters) (null? arguments))
+           ()
+           (popl-error "Not the same number of arguments and parameters")
+       )
+
+       (popl-bind (car parameters) (car arguments) env)
+   )
+
+   (if (and (not (null? parameters)) (not (null? arguments)))
+       (popl-apply-helper env (cdr parameters) (cdr arguments))
+   )
+)
+
 ;; given a non-primitive function,
 ;; make a copy of the function's environment
 ;; and with that copy,
@@ -211,23 +234,10 @@
 
 ;check if apply is right
 (define (popl-apply function arguments env)
-    (popl-apply-helper (popl-copy-environment env) (cadr function) arguments)
-    (third function)
- )
-
- (define (popl-apply-helper env parameters arguments)
-    (if (or (null? parameters) (null? arguments))
-        (if (and (null? parameters) (null? arguments))
-            ()
-            (popl-error "Not the same number of arguments and parameters")
-        )
-
-        (popl-bind (car parameters) (car arguments) env)
-    )
-
-    (if (and (not (null? parameters)) (not (null? arguments)))
-        (popl-apply-helper env (cdr parameters) (cdr arguments))
-    )
+(for-each (lambda (p a) (popl-bind p a env))
+    (cadr function)
+    arguments)
+    ;(popl-eval (third function) env)
  )
 
 ;; Evaluate all the elements of expr,
