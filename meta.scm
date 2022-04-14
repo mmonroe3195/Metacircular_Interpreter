@@ -251,12 +251,14 @@
 ;; 3. Return the last value.
 
 ;check if apply is right
-(define (popl-apply function arguments env)
-(for-each (lambda (p a) (popl-bind p a env))
+
+(define (popl-apply function arguments)
+(for-each (lambda (p a) (popl-bind p a (fourth function)))
     (cadr function)
     arguments)
-    (popl-eval (third function) env) ;uncomment when this is working for primitives
-    ;function
+
+    ;evaluating elements of the function's body and returning the cadr (the last value)
+    (cadr (map (lambda (e) (popl-eval e (fourth function))) (third function)))
  )
 
 ;; Evaluate all the elements of expr,
@@ -269,22 +271,28 @@
 ;; Otherwise use popl-error.
 
 ;decide if procedure given is primative or not
-(define (popl-eval-function-call expr env)
-    (if (procedure? (first expr))
+(define (popl-eval-function-call-old expr env)
+    (if (procedure? (first expr)) ; eq? '+ (first expr)
         (popl-eval-primative expr env)
         (if (eq? (car (first expr)) 'lambda)
-            (popl-apply (first expr) (cdr expr) env)
+            (popl-apply (first expr) (cdr expr))
             (popl-error "The function call is in the wrong form")
         )
     )
 )
 
-(define (popl-eval-primative expr env)
+(define (popl-eval-function-call expr env)
    (let* ((all-evaluated (map (lambda (e) (popl-eval e env)) expr))
           (fun (car all-evaluated))
           (args (cdr all-evaluated)))
-      (apply fun args))
+      (cond ((and (list? fun) (eq? (car fun) *LAMBDA*))
+            (popl-apply fun args))
+            ((procedure? (car all-evaluated))
+            (apply fun args))
+            (else (expr))
       )
+    )
+)
 
 ;add syntax checking and errors
 ;ex if we write (lambda) is bad or (lambda ())
