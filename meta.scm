@@ -153,27 +153,30 @@
 )
 
 (define (popl-eval-set! expr env)
+    ;if there isn't a current binding, signal an error.
     (if (not (popl-get-binding (cadr expr) env))
         (popl-error "Unbound variable " (cadr expr))
     )
     (let ((var (popl-env-value (cadr expr) env)))
+         ;updates the current value of the variable
          (popl-bind (cadr expr) (caddr expr) env)
+         ;returns the previous value of the variable
           var
     )
 )
 
 ;helper function. Called recersively so nested lets can be made.
-(define (let-helper bindlst body)
+(define (let*-helper bindlst body)
     (if (null? bindlst)
         body
         (append (cons 'let (list (list (car bindlst))))
-            (list (let-helper (cdr bindlst) body)))
+            (list (let*-helper (cdr bindlst) body)))
         )
 )
 
 ;converts let* into nested lets
 (define (popl-eval-let* expr env)
-    (popl-eval (let-helper (cadr expr) (caddr expr)) env)
+    (popl-eval (let*-helper (cadr expr) (caddr expr)) env)
 )
 
 ;given a list, check if it is the form ((a b) (c d) ...)
@@ -202,33 +205,42 @@
     )
 )
 
-;(let ((x 2) (x 3))
+; Note: currently does not work for: (let ((x (+ x 1))) (* x 2)) -> ((lambda (x) (* x 2)) (+ x 1))
+
+;(let ((x 2) (y 3))
 ;    (x * y))
 
 ;convert to
 ;((lambda (x y) (* x y)) 2 3)
-(define (popl-eval-let expr env)
+(define (popl-eval-let1 expr env)
     (if (or (null? (cdr expr)) (null? (cddr expr)) (not (cars-are-lists (cadr expr))))
         (popl-error "Ill formed syntax")
+        ;might need to evaluate cadrs if they are in form ex (+ 2 1)
         (popl-eval (append (list (append (cons 'lambda (list (get-cars (cadr expr)))) (cddr expr))) (get-cadars (cadr expr))) env)
     )
 )
 
-(define (popl-apply-helper env parameters arguments)
-   (if (or (null? parameters) (null? arguments))
-       (if (and (null? parameters) (null? arguments))
-           ()
-           (popl-error "Not the same number of arguments and parameters")
-       )
-
-       (popl-bind (car parameters) (car arguments) env)
-   )
-
-   (if (and (not (null? parameters)) (not (null? arguments)))
-       (popl-apply-helper env (cdr parameters) (cdr arguments))
-   )
+(define (popl-eval-let-args lst env)
+    (if (null? lst)
+        ()
+        (if (list? (car lst))
+            (append (list (popl-eval (car lst) env)) (popl-eval-let-args (cdr lst) env))
+            (append (list (car lst)) (popl-eval-let-args (cdr lst) env))
+        )
+    )
 )
+;not finished
+(define (popl-eval-let expr env)
+    (if (or (null? (cdr expr)) (null? (cddr expr)) (not (cars-are-lists (cadr expr))))
+        (popl-error "Ill formed syntax")
+        ;might need to evaluate cadrs if they are in form ex (+ 2 1)
 
+        ;(popl-eval-let-args (get-cadars (cadr expr)) env)
+        (popl-eval (append
+            (list (append (cons 'lambda (list (get-cars (cadr expr)))) (cddr expr)))
+                (popl-eval-let-args (get-cadars (cadr expr)) env)) env)
+    )
+)
 ;; given a non-primitive function,
 ;; make a copy of the function's environment
 ;; and with that copy,
@@ -243,7 +255,7 @@
 (for-each (lambda (p a) (popl-bind p a env))
     (cadr function)
     arguments)
-    ;(popl-eval (third function) env) ;uncomment when this is working for primitives
+    (popl-eval (third function) env) ;uncomment when this is working for primitives
     ;function
  )
 
