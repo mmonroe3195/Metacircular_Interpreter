@@ -152,16 +152,28 @@
     )
 )
 
+(define (set!-helper symbol env)
+    (if (eq? #f (popl-get-binding symbol env))
+        symbol
+        ;if the symbol has a binding for it, we call set!-helper again on the value that symbol is bound to
+        (set!-helper (popl-env-value symbol env) env)
+        )
+)
+
 (define (popl-eval-set! expr env)
     ;if there isn't a current binding, signal an error.
-    (if (not (popl-get-binding (cadr expr) env))
-        (popl-error "Unbound variable " (cadr expr))
+    (if (eq? #f (popl-get-binding (cadr expr) env))
+        (popl-error "Unbound variable: " (cadr expr))
     )
-    (let ((var (popl-env-value (cadr expr) env)))
+    (let* ((symbol  (cadr expr))
+          (old-val (popl-env-value symbol env))
+          (symbol-val (caddr expr))
+          (new-value (set!-helper symbol-val env))
+    )
          ;updates the current value of the variable
-         (popl-bind (cadr expr) (caddr expr) env)
+         (popl-set! symbol new-value env)
          ;returns the previous value of the variable
-          var
+          old-val
     )
 )
 
@@ -283,10 +295,10 @@
           ;if it is a non-primative expressions
           ((and (list? fun) (eq? (car fun) *LAMBDA*))
             (popl-apply fun args))
-
           ;if it is a primative expression
           ((procedure? (car all-evaluated))
             (apply fun args))
+          ;otherwise, it is an error.
           (else (popl-error "Ill formed statement!"))
       )
     )
