@@ -242,12 +242,17 @@
     )
 )
 ;not finished
+
 (define (popl-eval-let expr env)
     (if (or (null? (cdr expr)) (null? (cddr expr)) (not (cars-are-lists (cadr expr))))
         (popl-error "Ill formed syntax")
         ;might need to evaluate cadrs if they are in form ex (+ 2 1)
 
         ;(popl-eval-let-args (get-cadars (cadr expr)) env)
+
+        ;(let ((vars (get-cars (cadr expr))))
+        ;      ((map (lambda (e) (popl-get-binding e env)) expr))
+        ;)
         (popl-eval (append
             (list (append (cons 'lambda (list (get-cars (cadr expr)))) (cddr expr)))
                 (popl-eval-let-args (get-cadars (cadr expr)) env)) env)
@@ -274,8 +279,12 @@
     (cadr function)
     arguments)
 
-    ;evaluating elements of the function's body and returning the last value
-    (get-last (map (lambda (e) (popl-eval e (fourth function))) (third function)))
+    (let ((env  (fourth function))
+          (function-body (third function)))
+
+        ;evaluating elements of the function's body and returning the last value
+        (get-last (map (lambda (e) (popl-eval e env)) function-body))
+    )
  )
 
 ;; Evaluate all the elements of expr,
