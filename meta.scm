@@ -241,6 +241,13 @@
                 (popl-eval-let-args (get-cadars (cadr expr)) env)) env)
     )
 )
+
+(define (get-last lst)
+    (if (null? (cdr lst))
+        (car lst)
+        (get-last (cdr lst))
+    )
+)
 ;; given a non-primitive function,
 ;; make a copy of the function's environment
 ;; and with that copy,
@@ -250,15 +257,13 @@
 ;; element of the function's body.
 ;; 3. Return the last value.
 
-;check if apply is right
-
 (define (popl-apply function arguments)
 (for-each (lambda (p a) (popl-bind p a (fourth function)))
     (cadr function)
     arguments)
 
-    ;evaluating elements of the function's body and returning the cadr (the last value)
-    (cadr (map (lambda (e) (popl-eval e (fourth function))) (third function)))
+    ;evaluating elements of the function's body and returning the last value
+    (get-last (map (lambda (e) (popl-eval e (fourth function))) (third function)))
  )
 
 ;; Evaluate all the elements of expr,
