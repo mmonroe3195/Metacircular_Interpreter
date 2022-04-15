@@ -1,13 +1,9 @@
 ;; metacircular interpreter for a subset of scheme
 ;; Starter code author: Alistair Campbell
-
 ;; Completed by: Madison Monroe
-
 ;; Hamilton College
-
 ;; CS 220 - Principles of Programming Languages
 ;; Spring 2022
-
 
 ;;popl-make-empty-environment
 ;; Return a list consisting of an empty association list
@@ -27,7 +23,6 @@
 ;; return-value
 (define (popl-copy-environment env)
    (list (car env)))
-
 
 ;; popl-bind
 ;; Given a symbol, a value, and an environment
@@ -74,8 +69,7 @@
 ;; of the pair to the new value, and 4) return the old value
 (define (popl-set! symbol newval env)
     (let* ((binding (popl-get-binding symbol env))
-           (old-value (popl-env-value symbol env))
-           )
+           (old-value (popl-env-value symbol env)))
         (set-car! (cdr binding) newval)
         old-value))
 
@@ -106,14 +100,16 @@
 (popl-bind 'equal? equal? *TOPENV*)
 (popl-bind 'list list *TOPENV*)
 
-;; Yes, you can use scheme's if to implement this.
-;; It's not cheating!
 (define (popl-eval-if expr env)
-        (if (popl-eval (second expr) env)
-            (popl-eval (third expr) env)
-            (popl-eval (fourth expr) env)))
+    ;checking if the condition clause is true
+    (if (popl-eval (second expr) env)
+        ;if the condition clause is true, then execute the then clause
+        (popl-eval (third expr) env)
+        ;if the condition clause is false, then execute the else clause
+        (popl-eval (fourth expr) env)))
 
 (define (popl-eval-cond expr env)
+    ;if the expression is "(cond)", the helper function is not called
     (if (not (null? (cdr expr)))
         (popl-eval-cond-helper (cdr expr) env)))
 
@@ -122,11 +118,14 @@
         (if (not (null? expr))
             ;if it is an else
             (if (eq? 'else (caar expr))
-                ;if else is not the last condition
+                ;checking if else is last condition
                 (if (null? (cdr expr))
+                    ;if it is the last condition, evaluate the then body
                     (popl-eval (cadar expr) env)
-                    (popl-error "Ill formed cond statement.")
-                )
+                    ;if there are more condtions after else, error
+                    (popl-error "Ill formed cond statement."))
+
+                ;using a cond and recersively evaluating every condition with helper fn
                 (cond ((popl-eval (caar expr) env) (popl-eval (cadar expr) env))
                 ;if the first if-block is not true, and there is another condition to
                 ; evaluate, then call the helper function on the cdr of the expression
@@ -136,91 +135,63 @@
     (if (eq? #f (popl-get-binding symbol env))
         symbol
         ;if the symbol has a binding for it, we call set!-helper again on the value that symbol is bound to
-        (set!-helper (popl-env-value symbol env) env)
-        )
-)
+        (set!-helper (popl-env-value symbol env) env)))
 
 (define (popl-eval-set! expr env)
     ;if there isn't a current binding, signal an error.
     (if (eq? #f (popl-get-binding (cadr expr) env))
-        (popl-error "Unbound variable: " (cadr expr))
-    )
+        (popl-error "Unbound variable: " (cadr expr)))
+
     (let* ((symbol  (cadr expr))
           (old-val (popl-env-value symbol env))
           (symbol-val (popl-eval (caddr expr) env))
-          (new-value (set!-helper symbol-val env))
-    )
+          (new-value (set!-helper symbol-val env)))
+
          ;updates the current value of the variable
          (popl-set! symbol new-value env)
+
          ;returns the previous value of the variable
-         old-val
-    )
-)
+         old-val))
 
 ;helper function. Called recersively so nested lets can be made.
 (define (let*-helper bindlst body)
     (if (null? bindlst)
         body
         (append (cons 'let (list (list (car bindlst))))
-            (list (let*-helper (cdr bindlst) body)))
-        )
-)
+            (list (let*-helper (cdr bindlst) body)))))
 
 ;converts let* into nested lets
 (define (popl-eval-let* expr env)
-    (popl-eval (let*-helper (cadr expr) (caddr expr)) (popl-copy-environment env))
-)
+    (popl-eval (let*-helper (cadr expr) (caddr expr)) (popl-copy-environment env)))
 
 ;given a list, check if it is the form ((a b) (c d) ...)
 ;returns a list in the form (a c ...)
 (define (get-cars lst)
     (if (null? lst) ()
         (if (not (null? (caar lst)))
-        (cons (caar lst) (get-cars (cdr lst)))))
-)
+        (cons (caar lst) (get-cars (cdr lst))))))
 
 ;given a list, check if it is the form ((a b) (c d) ...)
 ;returns a list in the form (b d ...)
 (define (get-cadars lst)
     (if (null? lst) ()
         (if (not (null? (cadar lst)))
-        (cons (cadar lst) (get-cadars (cdr lst)))))
-)
+        (cons (cadar lst) (get-cadars (cdr lst))))))
 
 (define (cars-are-lists expr)
     (if (null? expr)
         #t
         (if (list? (car expr))
             (cars-are-lists (cdr expr))
-            #f
-        )
-    )
-)
-
-; Note: currently does not work for: (let ((x (+ x 1))) (* x 2)) -> ((lambda (x) (* x 2)) (+ x 1))
+            #f )))
 
 (define (popl-eval-let-args lst env)
     (if (null? lst)
         ()
         (if (list? (car lst))
             (append (list (popl-eval (car lst) env)) (popl-eval-let-args (cdr lst) env))
-            (append (list (car lst)) (popl-eval-let-args (cdr lst) env))
-        )
-    )
-)
+            (append (list (car lst)) (popl-eval-let-args (cdr lst) env)))))
 
-;changes the bindings that were overwritten for the let expression back to the original binding
-(define (reset-bindings prev-bindings env)
-    (if (not (null? prev-bindings))
-        (if (eq? #f (car prev-bindings))
-            () ;how to remove a binding for a symbol that wasnt bound before let expression?
-            (popl-set! (caar prev-bindings) (cadar prev-bindings) env)
-        )
-    )
-    (if (not (null? prev-bindings))
-        (reset-bindings (cdr prev-bindings) env)
-    )
-)
 ;converts the let into a lambda and calls popl-eval on the lambda
 ;retored and removes any new bindings made in the let expression
 ;ex. (let ((x 2) (y 3))
@@ -242,20 +213,12 @@
              ;lambda expression made and evaluated
             (popl-eval (append
                 (list (append (cons 'lambda (list vars)) (cddr expr)))
-                    (popl-eval-let-args (get-cadars (cadr expr)) copy-env)) copy-env))
-
-
-            ;restoring the previous bindings
-            ;(reset-bindings prev-bindings env)
-            ;returning the result of evaluating the lambda that the let expression was converted into
-)
+                    (popl-eval-let-args (get-cadars (cadr expr)) copy-env)) copy-env)))
 
 (define (get-last lst)
     (if (null? (cdr lst))
         (car lst)
-        (get-last (cdr lst))
-    )
-)
+        (get-last (cdr lst))))
 
 ;; given a non-primitive function,
 ;; make a copy of the function's environment
@@ -265,7 +228,6 @@
 ;; 2. evaluate each
 ;; element of the function's body.
 ;; 3. Return the last value.
-
 (define (popl-apply function arguments)
     (for-each (lambda (p a) (popl-bind p a (fourth function)))
         (cadr function)
@@ -275,9 +237,7 @@
               (function-body (third function)))
 
             ;evaluating elements of the function's body and returning the last value
-            (get-last (map (lambda (e) (popl-eval e (popl-copy-environment env))) function-body))
-        )
- )
+            (get-last (map (lambda (e) (popl-eval e (popl-copy-environment env))) function-body))))
 
 ;; Evaluate all the elements of expr,
 ;; which is a list.
@@ -290,11 +250,8 @@
 (define (popl-eval-function-call expr env)
 (let* ((all-evaluated (map (lambda (e) (popl-eval e env)) expr))
       (fun (car all-evaluated))
-      (args (cdr all-evaluated))
-      ;(param-list-length (list-length args))
-      ;(arg-list-length (list-length (cadar all-evaluated)))
-      )
-      ;expr
+      (args (cdr all-evaluated)))
+
   (cond
       ((and (list? fun) (eq? (car fun) *LAMBDA*) (not (= (list-length args) (list-length (cadar all-evaluated)))))
         (popl-error "Function expected " (list-length (cadar all-evaluated)) "arguments, but " (list-length args) " given"))
@@ -305,10 +262,7 @@
       ((procedure? (car all-evaluated))
         (apply fun args))
       ;otherwise, it is an error.
-      (else (popl-error "Ill formed statement!"))
-  )
-)
-)
+      (else (popl-error "Ill formed statement!")))))
 
 ;given a list of symbols, determines if there are any repeated symbols.
 ;Returns #t if there are repeats, returns #f if there are not
@@ -316,8 +270,7 @@
     (or (null? symbol-list)
         (and (symbol? (car symbol-list))
              (not (memq (car symbol-list) (cdr symbol-list)))
-             (unique-symbols (cdr symbol-list))
-        )))
+             (unique-symbols (cdr symbol-list)))))
 
 ;add syntax checking and errors
 ;ex if we write (lambda) is bad or (lambda ())
@@ -329,8 +282,7 @@
 
    ;determining if the parameter list contains any repeated symbols
    (if (not (unique-symbols (second expr)))
-       (popl-error "Ill-formed special form: " expr)
-   )
+       (popl-error "Ill-formed special form: " expr))
 
    (list *LAMBDA*             ;; special object indicating it's a lambda
          (second expr)        ;; parameter list
@@ -340,8 +292,7 @@
 (define (list-length lst)
     (if (null? lst)
         0
-        (+ 1 (list-length (cdr lst))))
-)
+        (+ 1 (list-length (cdr lst)))))
 ;; The name of the main evaluator is popl-eval-help
 ;; so that we can do enhanced tracing. See further comments below.
 (define (popl-eval-help expr env)
@@ -374,7 +325,6 @@
                (else (popl-eval-function-call expr env))))
         (else (popl-error "(internal) unknown object " expr " passed to evaluator"))))
 
-
 ;; Change this to #f before submitting:
 (define *ENABLE-DEBUG* #t)
 
@@ -396,7 +346,6 @@
     ; newline terminate
     (newline))))
 
-
 ;; This popl-eval is an augmentation that displays what's being
 ;; evaluated and what's being returned. Hopefully it's helpful
 ;; for debugging.
@@ -410,7 +359,6 @@
         (set! eval-level (- eval-level 1))
         result))))
 
-
 ;; This popl-repl is implemented with a continuation loop
 (define (popl-repl)
    (call-with-current-continuation (lambda (c) (set! *LOOPTOP* c)))
@@ -420,6 +368,4 @@
             (else (write (popl-eval expr *TOPENV*))     ;Eval, Print
                   (newline)
                   (*LOOPTOP* 'dontcare)))))             ;Loop
-
-
 ;; end
