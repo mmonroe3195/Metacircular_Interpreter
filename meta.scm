@@ -116,20 +116,25 @@
 (define (popl-eval-cond-helper expr env)
     (if (not (pair? (car expr))) (popl-error "Ill formed cond statment.")
         (if (not (null? expr))
+
+            (let ((condition (caar expr))
+                  (then-block (cadar expr))
+                  (rest (cdr expr)))
+
             ;if it is an else
-            (if (eq? 'else (caar expr))
+            (if (eq? 'else condition)
                 ;checking if else is last condition
-                (if (null? (cdr expr))
+                (if (null? rest)
                     ;if it is the last condition, evaluate the then body
-                    (popl-eval (cadar expr) env)
+                    (popl-eval then-block env)
                     ;if there are more condtions after else, error
                     (popl-error "Ill formed cond statement."))
 
                 ;using a cond and recersively evaluating every condition with helper fn
-                (cond ((popl-eval (caar expr) env) (popl-eval (cadar expr) env))
+                (cond ((popl-eval condition env) (popl-eval then-block env))
                 ;if the first if-block is not true, and there is another condition to
                 ; evaluate, then call the helper function on the cdr of the expression
-                ((not (null? (cdr expr))) (popl-eval-cond-helper (cdr expr) env)))))))
+                ((not (null? rest)) (popl-eval-cond-helper rest env))))))))
 
 (define (set!-helper symbol env)
     (if (eq? #f (popl-get-binding symbol env))
