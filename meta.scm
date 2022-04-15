@@ -37,9 +37,9 @@
 ;; => env1
 ;; (((b 2)))
 (define (popl-bind symbol value env)
-  (let* ((temp (cons (list symbol value) (car env))))
+    (let* ((temp (cons (list symbol value) (car env))))
         (set-car! env temp))
-    symbol)
+        symbol)
 
 ;; popl-get-binding
 ;; Given a symbol and an environment
@@ -142,7 +142,7 @@
     (if (eq? #f (popl-get-binding (cadr expr) env))
         (popl-error "Unbound variable: " (cadr expr)))
 
-    (let* ((symbol  (cadr expr))
+    (let* ((symbol (cadr expr))
           (old-val (popl-env-value symbol env))
           (symbol-val (popl-eval (caddr expr) env))
           (new-value (set!-helper symbol-val env)))
@@ -164,20 +164,17 @@
 (define (popl-eval-let* expr env)
     (popl-eval (let*-helper (cadr expr) (caddr expr)) (popl-copy-environment env)))
 
-;given a list, check if it is the form ((a b) (c d) ...)
+;given a list in the form ((a b) (c d) ...)
 ;returns a list in the form (a c ...)
 (define (get-cars lst)
-    (if (null? lst) ()
-        (if (not (null? (caar lst)))
-        (cons (caar lst) (get-cars (cdr lst))))))
+    (map (lambda (e) (car e)) lst))
 
-;given a list, check if it is the form ((a b) (c d) ...)
+;given a list in the form ((a b) (c d) ...)
 ;returns a list in the form (b d ...)
-(define (get-cadars lst)
-    (if (null? lst) ()
-        (if (not (null? (cadar lst)))
-        (cons (cadar lst) (get-cadars (cdr lst))))))
+(define (get-cadrs lst)
+    (map (lambda (e) (cadr e)) lst))
 
+;checks if the cars of an expression are all lists
 (define (cars-are-lists expr)
     (if (null? expr)
         #t
@@ -213,7 +210,7 @@
              ;lambda expression made and evaluated
             (popl-eval (append
                 (list (append (cons 'lambda (list vars)) (cddr expr)))
-                    (popl-eval-let-args (get-cadars (cadr expr)) copy-env)) copy-env)))
+                    (popl-eval-let-args (get-cadrs (cadr expr)) copy-env)) copy-env)))
 
 (define (get-last lst)
     (if (null? (cdr lst))
