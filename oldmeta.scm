@@ -1,3 +1,4 @@
+
 ;; metacircular interpreter for a subset of scheme
 ;; Starter code author: Alistair Campbell
 
@@ -55,6 +56,7 @@
 ;; Return #f if no such binding exists
 ;; You can use the built-in assoc function for
 ;; this.
+
 (define (popl-get-binding symbol env)
     (let ((pair (assoc symbol (car env))))
       (if (not pair) #f
@@ -106,31 +108,49 @@
 (popl-bind 'equal? equal? *TOPENV*)
 (popl-bind 'list list *TOPENV*)
 
+
 ;; Yes, you can use scheme's if to implement this.
 ;; It's not cheating!
+
+;(if cond then else)
+; (if cond
+;    a
+;    b)
+
+; do i need error checking?
 (define (popl-eval-if expr env)
         (if (popl-eval (second expr) env)
             (popl-eval (third expr) env)
             (popl-eval (fourth expr) env)))
 
+;expr is in the form
+;(cond (cond1
+;       then1)
+
+;      (cond2
+;       then2)
+
+;      (cond3
+;       then3)
+
+;      (else
+;       action4))
+
 (define (popl-eval-cond expr env)
     (if (not (null? (cdr expr)))
-        (popl-eval-cond-helper (cdr expr) env)))
+        (popl-eval-cond-helper (cdr expr) env)
+    )
+)
 
 (define (popl-eval-cond-helper expr env)
     (if (not (pair? (car expr))) (popl-error "Ill formed cond statment.")
         (if (not (null? expr))
-            ;if it is an else
-            (if (eq? 'else (caar expr))
-                ;if else is not the last condition
-                (if (null? (cdr expr))
-                    (popl-eval (cadar expr) env)
-                    (popl-error "Ill formed cond statement.")
-                )
-                (cond ((popl-eval (caar expr) env) (popl-eval (cadar expr) env))
-                ;if the first if-block is not true, and there is another condition to
-                ; evaluate, then call the helper function on the cdr of the expression
-                ((not (null? (cdr expr))) (popl-eval-cond-helper (cdr expr) env)))))))
+            (cond ((popl-eval (caar expr) env) (popl-eval (cadar expr) env))
+                  ((not (null? (cdr expr))) (popl-eval (popl-eval-cond-helper (cdr expr) env) env))
+             )
+        )
+    )
+)
 
 (define (set!-helper symbol env)
     (if (eq? #f (popl-get-binding symbol env))
@@ -147,13 +167,13 @@
     )
     (let* ((symbol  (cadr expr))
           (old-val (popl-env-value symbol env))
-          (symbol-val (popl-eval (caddr expr) env))
+          (symbol-val (caddr expr))
           (new-value (set!-helper symbol-val env))
     )
          ;updates the current value of the variable
          (popl-set! symbol new-value env)
          ;returns the previous value of the variable
-         old-val
+          old-val
     )
 )
 
@@ -168,7 +188,7 @@
 
 ;converts let* into nested lets
 (define (popl-eval-let* expr env)
-    (popl-eval (let*-helper (cadr expr) (caddr expr)) (popl-copy-environment env))
+    (popl-eval (let*-helper (cadr expr) (caddr expr)) env)
 )
 
 ;given a list, check if it is the form ((a b) (c d) ...)
@@ -231,23 +251,24 @@
     (if (or (null? (cdr expr)) (null? (cddr expr)) (not (cars-are-lists (cadr expr))))
         (popl-error "Ill formed syntax"))
 
-        (let ((vars (get-cars (cadr expr)))
-              (copy-env (popl-copy-environment env)))
+        (let* ((vars (get-cars (cadr expr)))
               ;creates a list all the bindings for the variables for the let.
               ; ex. if the parameters are (x y z) and none of these symbols were
               ; defined before the let statement, the list will be (#f #f #f)
               ; ex. if only x was defined to be 1 the list will be ((x 1) #f #f)
-             ;(prev-bindings (map (lambda (e) (popl-get-binding e env)) vars))
+             (prev-bindings (map (lambda (e) (popl-get-binding e env)) vars))
 
              ;lambda expression made and evaluated
-            (popl-eval (append
+            (result (popl-eval (append
                 (list (append (cons 'lambda (list vars)) (cddr expr)))
-                    (popl-eval-let-args (get-cadars (cadr expr)) copy-env)) copy-env))
+                    (popl-eval-let-args (get-cadars (cadr expr)) env)) env)))
 
 
             ;restoring the previous bindings
-            ;(reset-bindings prev-bindings env)
+            (reset-bindings prev-bindings env)
             ;returning the result of evaluating the lambda that the let expression was converted into
+            result
+        )
 )
 
 (define (get-last lst)
@@ -275,7 +296,7 @@
               (function-body (third function)))
 
             ;evaluating elements of the function's body and returning the last value
-            (get-last (map (lambda (e) (popl-eval e (popl-copy-environment env))) function-body))
+            (get-last (map (lambda (e) (popl-eval e env)) function-body))
         )
  )
 
@@ -297,7 +318,7 @@
       ;expr
   (cond
       ((and (list? fun) (eq? (car fun) *LAMBDA*) (not (= (list-length args) (list-length (cadar all-evaluated)))))
-        (popl-error "Function expected " (list-length (cadar all-evaluated)) "arguments, but " (list-length args) " given"))
+        (popl-error "Function expected " (list-length args) "arguments, but " (list-length (cadar all-evaluated)) " given"))
       ;if it is a non-primative expressions
       ((and (list? fun) (eq? (car fun) *LAMBDA*))
        (popl-apply fun args))
