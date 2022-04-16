@@ -101,6 +101,12 @@
 (popl-bind 'list list *TOPENV*)
 
 (define (popl-eval-if expr env)
+
+    (let ((expr-len (list-length expr)))
+        ;checking that the if statement is formed properly
+        (if (or (> expr-len 4) (< expr-len 3))
+            (popl-error "Ill-formed syntax: " expr)))
+
     ;checking if the condition clause is true
     (if (popl-eval (second expr) env)
         ;if the condition clause is true, then execute the then clause
@@ -217,6 +223,7 @@
                 (list (append (cons 'lambda (list vars)) (cddr expr)))
                     (popl-eval-let-args (get-cadrs (cadr expr)) copy-env)) copy-env)))
 
+;gets the last element of a list
 (define (get-last lst)
     (if (null? (cdr lst))
         (car lst)
@@ -295,6 +302,7 @@
     (if (null? lst)
         0
         (+ 1 (list-length (cdr lst)))))
+
 ;; The name of the main evaluator is popl-eval-help
 ;; so that we can do enhanced tracing. See further comments below.
 (define (popl-eval-help expr env)
@@ -302,7 +310,9 @@
              (boolean? expr)
              (string? expr)
              (null? expr)) expr)
-        ((symbol? expr) (popl-env-value expr env))
+        ;If the expression is a symbol, check to see if there is an existing binding for it.
+        ;If so, return the binding. If there is no binding, signal an error
+        ((symbol? expr) (if (eq? #f (popl-get-binding expr env)) (popl-error "Unbound variable: " expr) (popl-env-value expr env)))
         ((pair? expr)
          (cond ((eq? (first expr) 'define)
                 (if (or (< (list-length expr) 3) (> (list-length expr) 3))
@@ -328,7 +338,7 @@
         (else (popl-error "(internal) unknown object " expr " passed to evaluator"))))
 
 ;; Change this to #f before submitting:
-(define *ENABLE-DEBUG* #t)
+(define *ENABLE-DEBUG* #f)
 
 ;; Execute a thunk n times.
 (define (dotimes n something)
@@ -355,9 +365,9 @@
   (let ((eval-level 0))   ;; keeps track of current recursion depth
     (lambda (expr env)
       (set! eval-level (+ eval-level 1))
-      ;(popl-debug-println eval-level "Evaluating: " expr)
+      (popl-debug-println eval-level "Evaluating: " expr)
       (let ((result (popl-eval-help expr env)))
-        ;(popl-debug-println eval-level "Returning: " result)
+        (popl-debug-println eval-level "Returning: " result)
         (set! eval-level (- eval-level 1))
         result))))
 
