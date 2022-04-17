@@ -101,7 +101,6 @@
 (popl-bind 'list list *TOPENV*)
 
 (define (popl-eval-if expr env)
-
     (let ((expr-len (list-length expr)))
         ;checking that the if statement is formed properly
         (if (or (> expr-len 4) (< expr-len 3))
@@ -142,6 +141,7 @@
                 ; evaluate, then call the helper function on the cdr of the expression
                 ((not (null? rest)) (popl-eval-cond-helper rest env))))))))
 
+;determines the new value that the symbol should be bound to
 (define (set!-helper symbol env)
     (if (eq? #f (popl-get-binding symbol env))
         symbol
@@ -149,20 +149,26 @@
         (set!-helper (popl-env-value symbol env) env)))
 
 (define (popl-eval-set! expr env)
-    ;if there isn't a current binding, signal an error.
-    (if (eq? #f (popl-get-binding (cadr expr) env))
-        (popl-error "Unbound variable: " (cadr expr)))
+    (let ((expr-len (list-length expr)))
+        (if (= expr-len 1)
+            (popl-error "Ill-formed syntax: " expr))
+        (let ((symbol (cadr expr)))
+             (cond ((or (> expr-len 3) (not (symbol? symbol)))
+                    ((popl-error "Variable required in this context: " symbol)))
+                   ;if there isn't a current binding, signal an error.
+                   ((eq? #f (popl-get-binding symbol env))
+                    (popl-error "Unbound variable: " symbol))
+                   ;if the expression is of the correct length
+                   ((= expr-len 3)
+                    (let* ((old-val (popl-env-value symbol env))
+                    (symbol-val (popl-eval (caddr expr) env))
+                    (new-value (set!-helper symbol-val env)))
 
-    (let* ((symbol (cadr expr))
-          (old-val (popl-env-value symbol env))
-          (symbol-val (popl-eval (caddr expr) env))
-          (new-value (set!-helper symbol-val env)))
+                    ;updates the current value of the variable
+                    (popl-set! symbol new-value env)
 
-         ;updates the current value of the variable
-         (popl-set! symbol new-value env)
-
-         ;returns the previous value of the variable
-         old-val))
+                    ;returns the previous value of the variable
+                    old-val))))))
 
 ;helper function. Called recersively so nested lets can be made.
 (define (let*-helper bindlst body)
@@ -271,7 +277,7 @@
       ((procedure? (car all-evaluated))
         (apply fun args))
       ;otherwise, it is an error.
-      (else (popl-error "Ill formed statement!")))))
+      (else (popl-error "Ill formed statement: " expr)))))
 
 ;given a list of symbols, determines if there are any repeated symbols.
 ;Returns #t if there are repeats, returns #f if there are not
@@ -298,6 +304,7 @@
          (cddr expr)          ;; function body (list of expressions)
          env))                ;; the current environment
 
+;determines the length of lst
 (define (list-length lst)
     (if (null? lst)
         0
@@ -312,16 +319,22 @@
              (null? expr)) expr)
         ;If the expression is a symbol, check to see if there is an existing binding for it.
         ;If so, return the binding. If there is no binding, signal an error
-        ((symbol? expr) (if (eq? #f (popl-get-binding expr env)) (popl-error "Unbound variable: " expr) (popl-env-value expr env)))
+        ((symbol? expr) (if (eq? #f (popl-get-binding expr env))
+                            (popl-error "Unbound variable: " expr)
+                            (popl-env-value expr env)))
         ((pair? expr)
          (cond ((eq? (first expr) 'define)
+                ;checking to see if expr is in the proper form for define
                 (if (or (< (list-length expr) 3) (> (list-length expr) 3))
                     (popl-error "Ill-formed special form: " expr)
                     (let ((sym (second expr))
                         (val (popl-eval (third expr) env)))
                         (popl-bind sym val env))))
                ((eq? (first expr) 'quote)
-                (second expr))
+                ;checking to see if expr is in the proper form for quote
+                (if (= (list-length expr) 2)
+                    (second expr)
+                    (popl-error "Ill formed syntax: " expr)))
                ((eq? (first expr) 'lambda)
                 (popl-eval-lambda expr env))
                ((eq? (first expr) 'if)
