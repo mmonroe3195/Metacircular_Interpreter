@@ -194,13 +194,16 @@
 ;helper function. Called recersively so nested lets can be made.
 (define (let*-helper bindlst body)
     (if (null? (cdr bindlst))
+        ;if the cdr is null, we do not need to call the fn recersively
+        ;also, the format of the list differs slightly so that the body can be incorporated properly
         (append (cons 'let (list (list (car bindlst)))) body)
+        ;recersively making nested lets
         (append (cons 'let (list (list (car bindlst))))
             (list (let*-helper (cdr bindlst) body)))))
 
 ;converts let* into nested lets
 (define (popl-eval-let* expr env)
-    (proper-let expr)
+    (proper-let expr) ; checking to make sure the let* is formatted properly
     (popl-eval (let*-helper (cadr expr) (cddr expr)) (popl-copy-environment env)))
 
 ;given a list in the form ((a b) (c d) ...)
@@ -212,14 +215,6 @@
 ;returns a list in the form (b d ...)
 (define (get-cadrs lst)
     (map (lambda (e) (cadr e)) lst))
-
-;checks if the cars of an expression are all lists
-(define (cars-are-lists expr)
-    (if (null? expr)
-        #t
-        (if (list? (car expr))
-            (cars-are-lists (cdr expr))
-            #f )))
 
 ;evaluates the let arguments if when given a list
 (define (popl-eval-let-args lst env)
