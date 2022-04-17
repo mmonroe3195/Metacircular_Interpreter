@@ -132,7 +132,7 @@
                 (if (null? rest)
                     ;if it is the last condition, evaluate the then body
                     (popl-eval then-block env)
-                    ;if there are more condtions after else, error
+                    ;if there are more conditions after else, error
                     (popl-error "Ill formed cond statement."))
 
                 ;using a cond and recersively evaluating every condition with helper fn
@@ -141,12 +141,13 @@
                 ; evaluate, then call the helper function on the cdr of the expression
                 ((not (null? rest)) (popl-eval-cond-helper rest env))))))))
 
-;determines the new value that the symbol should be bound to
-(define (set!-helper symbol env)
-    (if (eq? #f (popl-get-binding symbol env))
-        symbol
-        ;if the symbol has a binding for it, we call set!-helper again on the value that symbol is bound to
-        (set!-helper (popl-env-value symbol env) env)))
+;determines the new value for a binding
+(define (set!-helper new-val env)
+    ;if the new-val has a binding for it, we call set!-helper again on that symbol it is bound to
+    ;if the new-val does not have a binding, we return the new-val
+    (if (eq? #f (popl-get-binding new-val env))
+        new-val
+        (set!-helper (popl-env-value new-val env) env)))
 
 (define (popl-eval-set! expr env)
     (let ((expr-len (list-length expr)))
@@ -170,6 +171,10 @@
                     ;returns the previous value of the variable
                     old-val))))))
 
+;given an expression, checks if let or let* is in the proper form
+(define (let-checker expr)
+'add later
+)
 ;helper function. Called recersively so nested lets can be made.
 (define (let*-helper bindlst body)
     (if (null? bindlst)
@@ -218,11 +223,6 @@
 
         (let ((vars (get-cars (cadr expr)))
               (copy-env (popl-copy-environment env)))
-              ;creates a list all the bindings for the variables for the let.
-              ; ex. if the parameters are (x y z) and none of these symbols were
-              ; defined before the let statement, the list will be (#f #f #f)
-              ; ex. if only x was defined to be 1 the list will be ((x 1) #f #f)
-             ;(prev-bindings (map (lambda (e) (popl-get-binding e env)) vars))
 
              ;lambda expression made and evaluated
             (popl-eval (append
@@ -295,9 +295,18 @@
    ;; that the parameter list is a list containing only
    ;; symbols with no duplicates.
 
-   ;determining if the parameter list contains any repeated symbols
-   (if (not (unique-symbols (second expr)))
-       (popl-error "Ill-formed special form: " expr))
+   ;cond statement checking for different errors in lambda formation. Error seperated for clarity.
+   (cond ((< (list-length expr) 3)
+      (popl-error "Ill formed syntax: " expr))
+      ;if the parameter list is not a list. Error.
+      ((not (list? (second expr)))
+       (popl-error "Ill formed syntax: " expr))
+      ;if there are repeats in symbols for the parameter list, error
+      ((not (unique-symbols (second expr)))
+       ((popl-error "Ill-formed special form: " expr))))
+
+    ;checking that all of the elements in the parameter list are symbols
+    (for-each (lambda (e) (if (not (symbol? e)) (popl-error "Ill formed syntax: " expr))) (second expr))
 
    (list *LAMBDA*             ;; special object indicating it's a lambda
          (second expr)        ;; parameter list
