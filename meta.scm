@@ -172,9 +172,33 @@
                     old-val))))))
 
 ;given an expression, checks if let or let* is in the proper form
-(define (let-checker expr)
-'add later
+(define (proper-let expr)
+
+    ;checking if the expression is of the proper length
+    (if (< (list-length expr) 3)
+        (popl-error "Ill formed syntax: " expr))
+
+        (let ((binding-lst (second expr))
+              (body (cddr expr)))
+
+             ;checking to see if there are too many nested lists
+             (if (list? (caar binding-lst))
+                (popl-error "Ill formed syntax: " expr))
+
+             ;checking to see if each element in the binding list is a pair and that there aren't too many nested lists
+             ;if not, signal an error.
+             (for-each (lambda (e)
+                 (if (or (not (pair? e)) (list? (car e)))
+                     (popl-error "Ill formed syntax: " expr))) binding-lst)
+
+            ;checking each element of the body
+            ;if it is a pair and the first element of the pair is not a procedure, error.
+            (for-each (lambda (e)
+                 (if (and (pair? e) (not (procedure? (car e))))
+                     (popl-error "Ill formed syntax: " (car e)))) body)
+    )
 )
+
 ;helper function. Called recersively so nested lets can be made.
 (define (let*-helper bindlst body)
     (if (null? bindlst)
@@ -204,6 +228,7 @@
             (cars-are-lists (cdr expr))
             #f )))
 
+;evaluates the let arguments if when given a list
 (define (popl-eval-let-args lst env)
     (if (null? lst)
         ()
@@ -218,8 +243,7 @@
 ;convert to:
 ;((lambda (x y) (* x y)) 2 3)
 (define (popl-eval-let expr env)
-    (if (or (null? (cdr expr)) (null? (cddr expr)) (not (cars-are-lists (cadr expr))))
-        (popl-error "Ill formed syntax"))
+    (proper-let expr)
 
         (let ((vars (get-cars (cadr expr)))
               (copy-env (popl-copy-environment env)))
@@ -268,6 +292,7 @@
       (args (cdr all-evaluated)))
 
   (cond
+      ;checking for an unequal number of arguments and parameters
       ((and (list? fun) (eq? (car fun) *LAMBDA*) (not (= (list-length args) (list-length (cadar all-evaluated)))))
         (popl-error "Function expected " (list-length (cadar all-evaluated)) "arguments, but " (list-length args) " given"))
       ;if it is a non-primative expressions
@@ -360,7 +385,7 @@
         (else (popl-error "(internal) unknown object " expr " passed to evaluator"))))
 
 ;; Change this to #f before submitting:
-(define *ENABLE-DEBUG* #f)
+(define *ENABLE-DEBUG* #t)
 
 ;; Execute a thunk n times.
 (define (dotimes n something)
