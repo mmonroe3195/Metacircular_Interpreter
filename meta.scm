@@ -181,23 +181,15 @@
         (let ((binding-lst (second expr))
               (body (cddr expr)))
 
-             ;checking to see if there are too many nested lists
-             (if (list? (caar binding-lst))
+             ;checking to see if there are too many nested lists or not enough parenthesis in the binding list
+             (if (or (not (list? (car binding-lst))) (list? (caar binding-lst)))
                 (popl-error "Ill formed syntax: " expr))
 
              ;checking to see if each element in the binding list is a pair and that there aren't too many nested lists
              ;if not, signal an error.
              (for-each (lambda (e)
                  (if (or (not (pair? e)) (list? (car e)))
-                     (popl-error "Ill formed syntax: " expr))) binding-lst)
-
-            ;checking each element of the body
-            ;if it is a pair and the first element of the pair is not a procedure, error.
-            (for-each (lambda (e)
-                 (if (and (pair? e) (not (procedure? (car e))))
-                     (popl-error "Ill formed syntax: " (car e)))) body)
-    )
-)
+                     (popl-error "Ill formed syntax: " expr))) binding-lst)))
 
 ;helper function. Called recersively so nested lets can be made.
 (define (let*-helper bindlst body)
@@ -208,6 +200,7 @@
 
 ;converts let* into nested lets
 (define (popl-eval-let* expr env)
+    (proper-let expr)
     (popl-eval (let*-helper (cadr expr) (caddr expr)) (popl-copy-environment env)))
 
 ;given a list in the form ((a b) (c d) ...)
@@ -302,7 +295,7 @@
       ((procedure? (car all-evaluated))
         (apply fun args))
       ;otherwise, it is an error.
-      (else (popl-error "Ill formed statement: " expr)))))
+      (else (popl-error "The object " (car expr) " is not applicable.")))))
 
 ;given a list of symbols, determines if there are any repeated symbols.
 ;Returns #t if there are repeats, returns #f if there are not
@@ -385,7 +378,7 @@
         (else (popl-error "(internal) unknown object " expr " passed to evaluator"))))
 
 ;; Change this to #f before submitting:
-(define *ENABLE-DEBUG* #t)
+(define *ENABLE-DEBUG* #f)
 
 ;; Execute a thunk n times.
 (define (dotimes n something)
