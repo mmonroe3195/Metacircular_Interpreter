@@ -114,14 +114,18 @@
         (popl-eval (fourth expr) env)))
 
 (define (popl-eval-cond expr env)
-    ;if the expression is "(cond)", the helper function is not called
-    (if (not (null? (cdr expr)))
-        (popl-eval-cond-helper (cdr expr) env)))
+    (let ((body (cdr expr)))
+        ;error checking to ensure cond is in the correct form
+        (for-each (lambda (e)
+            (if (or (not (pair? e)) (and (pair? (car e)) (null? (cdr e))))
+                (popl-error "Ill formed syntax: " expr))) body)
+
+        ;if the expression is "(cond)", the helper function is not called
+        (if (not (null? body))
+            (popl-eval-cond-helper body env))))
 
 (define (popl-eval-cond-helper expr env)
-    (if (not (pair? (car expr))) (popl-error "Ill formed cond statment.")
         (if (not (null? expr))
-
             (let ((condition (caar expr))
                   (then-block (cadar expr))
                   (rest (cdr expr)))
@@ -138,8 +142,8 @@
                 ;using a cond and recersively evaluating every condition with helper fn
                 (cond ((popl-eval condition env) (popl-eval then-block env))
                 ;if the first if-block is not true, and there is another condition to
-                ; evaluate, then call the helper function on the cdr of the expression
-                ((not (null? rest)) (popl-eval-cond-helper rest env))))))))
+                ; evaluate, then call the helper function on the rest
+                ((not (null? rest)) (popl-eval-cond-helper rest env)))))))
 
 ;determines the new value for a binding
 (define (set!-helper new-val env)
@@ -151,10 +155,14 @@
 
 (define (popl-eval-set! expr env)
     (let ((expr-len (list-length expr)))
+
+        ;checking for errors in set! formation
         (if (= expr-len 1)
             (popl-error "Ill-formed syntax: " expr))
         (let ((symbol (cadr expr)))
-             (cond ((or (> expr-len 3) (not (symbol? symbol)))
+             (cond
+                   ;if the expression is of the wrong size or the symbol is not a correct symbol
+                   ((or (> expr-len 3) (not (symbol? symbol)))
                     ((popl-error "Variable required in this context: " symbol)))
                    ;if there isn't a current binding, signal an error.
                    ((eq? #f (popl-get-binding symbol env))
@@ -290,7 +298,7 @@
       ((procedure? (car all-evaluated))
         (apply fun args))
       ;otherwise, it is an error.
-      (else (popl-error "The object " (car expr) " is not applicable.")))))
+      (else (popl-error "The object " (popl-eval (car expr) env) " is not applicable.")))))
 
 ;given a list of symbols, determines if there are any repeated symbols.
 ;Returns #t if there are repeats, returns #f if there are not
