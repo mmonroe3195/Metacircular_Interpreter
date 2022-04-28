@@ -127,7 +127,7 @@
 (define (popl-eval-cond-helper expr env)
         (if (not (null? expr))
             (let ((condition (caar expr))
-                  (then-block (cadar expr))
+                  (then-block (cdar expr))
                   (rest (cdr expr)))
 
             ;if it is an else
@@ -135,12 +135,22 @@
                 ;checking if else is last condition
                 (if (null? rest)
                     ;if it is the last condition, evaluate the then body
-                    (popl-eval then-block env)
+                    (let ((result #!unspecific))
+                        ;evaluating each element in the body and returning the result
+                        (for-each (lambda (e) (set! result (popl-eval e env)))
+                                     then-block)
+                         result)
                     ;if there are more conditions after else, error
                     (popl-error "Ill formed cond statement."))
 
                 ;using a cond and recersively evaluating every condition with helper fn
-                (cond ((popl-eval condition env) (popl-eval then-block env))
+                (cond ((popl-eval condition env)
+                    ;evaluating each element of the body if the condition is true
+                    (let ((result #!unspecific))
+                        (for-each (lambda (e) (set! result (popl-eval e env)))
+                                     then-block)
+                         result))
+
                 ;if the first if-block is not true, and there is another condition to
                 ; evaluate, then call the helper function on the rest
                 ((not (null? rest)) (popl-eval-cond-helper rest env)))))))
@@ -205,7 +215,7 @@
         ;if the cdr is null, we do not need to call the fn recersively
         ;also, the format of the list differs slightly so that the body can be incorporated properly
         (append (cons 'let (list (list (car bindlst)))) body)
-        ;recersively making nested lets
+        ;recersively making more nested lets
         (append (cons 'let (list (list (car bindlst))))
             (list (let*-helper (cdr bindlst) body)))))
 
@@ -224,7 +234,7 @@
 (define (get-cadrs lst)
     (map (lambda (e) (cadr e)) lst))
 
-;evaluates the let arguments if when given a list
+;evaluates the let arguments when given a list
 (define (popl-eval-let-args lst env)
     (if (null? lst)
         ()
@@ -233,13 +243,12 @@
             (append (list (car lst)) (popl-eval-let-args (cdr lst) env)))))
 
 ;converts the let into a lambda and calls popl-eval on the lambda
-;retored and removes any new bindings made in the let expression
 ;ex. (let ((x 2) (y 3))
 ;         (x * y))
 ;convert to:
 ;((lambda (x y) (* x y)) 2 3)
 (define (popl-eval-let expr env)
-    (proper-let expr)
+    (proper-let expr) ;checking if the let is formed properly
 
         (let ((vars (get-cars (cadr expr)))
               (copy-env (popl-copy-environment env)))
@@ -290,7 +299,7 @@
   (cond
       ;checking for an unequal number of arguments and parameters
       ((and (list? fun) (eq? (car fun) *LAMBDA*) (not (= (list-length args) (list-length (cadar all-evaluated)))))
-        (popl-error "Function expected " (list-length (cadar all-evaluated)) "arguments, but " (list-length args) " given"))
+        (popl-error "Function expected " (list-length (cadar all-evaluated)) " arguments, but " (list-length args) " given"))
       ;if it is a non-primative expressions
       ((and (list? fun) (eq? (car fun) *LAMBDA*))
        (popl-apply fun args))
@@ -316,7 +325,7 @@
    ;; that the parameter list is a list containing only
    ;; symbols with no duplicates.
 
-   ;cond statement checking for different errors in lambda formation. Error seperated for clarity.
+   ;cond statement checking for different errors in lambda formation. Errors seperated for clarity.
    (cond ((< (list-length expr) 3)
       (popl-error "Ill formed syntax: " expr))
       ;if the parameter list is not a list. Error.
